@@ -151,5 +151,6 @@ if st.button("Buscar Previsão e Interpretar"): # Botão para buscar e interpret
         else:
             st.error("Não foi possível obter todos os dados de previsão.")
 st.markdown("---")
-st.write("\n*Desenvolvido com 💙 por Levi e Manus AI*\n")
+
+
 
