@@ -56,9 +56,9 @@ def nearest_index(times: List[datetime.datetime], now: Optional[datetime.datetim
         now = datetime.datetime.now()
     return min(range(len(times)), key=lambda i: abs(times[i] - now))
 
-# ---------- Open‑Meteo Marine API ----------
+# ---------- Open-Meteo Marine API ----------
 def fetch_open_meteo(lat: float, lon: float) -> Optional[Dict[str, Any]]:
-    """Fetch hourly marine data from Open‑Meteo."""
+    """Fetch hourly marine data from Open-Meteo."""
     key = f"openmeteo:{lat:.4f},{lon:.4f}"
     cached = cache.get(key)
     if cached:
@@ -81,7 +81,7 @@ def fetch_open_meteo(lat: float, lon: float) -> Optional[Dict[str, Any]]:
         return None
 
 def pick_open_meteo_point(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Pick the forecast hour closest to now from Open‑Meteo data."""
+    """Pick the forecast hour closest to now from Open-Meteo data."""
     try:
         times_iso = data["hourly"]["time"]
         times = parse_iso_list(times_iso)
@@ -217,9 +217,9 @@ def pick_openweather_now(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
-# ---------- Tide API (external) ----------
+# ---------- Tide API (Tabua-Mare) ----------
 def fetch_tide(location: str) -> Optional[Any]:
-    """Fetch tide information from external API if URL provided."""
+    """Fetch tide information from API-Tabua-Mare."""
     if not TIDE_API_URL:
         return None
     key = f"tide:{location}"
@@ -227,12 +227,15 @@ def fetch_tide(location: str) -> Optional[Any]:
     if cached:
         return cached
     try:
-        r = httpx.get(TIDE_API_URL, params={"location": location}, timeout=10)
+        # Corrigido: a API usa o nome da cidade no path
+        url = f"{TIDE_API_URL}/{location}"
+        r = httpx.get(url, timeout=10)
         r.raise_for_status()
         data = r.json()
         cache.set(key, data)
         return data
-    except Exception:
+    except Exception as e:
+        print("Erro ao buscar maré:", e)
         return None
 
 # ---------- Merging logic ----------
@@ -243,7 +246,7 @@ def merge_forecast(
 ) -> Dict[str, Any]:
     """
     Merge data from different sources.
-    Waves/swell: prefer Stormglass if available, else Open‑Meteo.
+    Waves/swell: prefer Stormglass if available, else Open-Meteo.
     Wind: prefer OpenWeather, else Stormglass.
     """
     merged: Dict[str, Any] = {"time": None, "sources": {}}
@@ -329,6 +332,12 @@ def api_explain():
         "tide": tide,
         "explanation_pt": explanation_pt,
     })
+
+@app.get("/api/tide")
+def api_tide():
+    """Endpoint para testar apenas a maré"""
+    data = fetch_tide(TIDE_LOCATION)
+    return jsonify(data or {"error": "Sem dados de maré"})
 
 @app.get("/health")
 def health():
